@@ -1,7 +1,6 @@
 # Energy Synthetic Data Pipeline
 
-I am trying to make a mathematically grounded pipeline for generating synthetic energy commodity market data, built on path signatures, variational autoencoders, and the UK electricity market.(all of this is subject to change as I learn by doing!) I also want to try and learn new tools that I investigated while studying but didn't have time to learn. Hopefully the synthetic data pipeline can used with different data, e.g. equities, bonds or even sports? 
-
+A mathematically grounded pipeline for generating synthetic energy commodity market data, built on path signatures, variational autoencoders and stochastic control. Data sources are the Elexon Insights and Carbon Intensity APIs. Downstream applications include stochastic control (gas storage), CVaR portfolio optimisation, and deep hedging. Hopefully the synthetic data pipeline can used with different data.
 ## My historic thread
 
 This project connects three stages of prior work:
