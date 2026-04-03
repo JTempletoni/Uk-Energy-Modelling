@@ -1,8 +1,8 @@
 # Energy Synthetic Data Pipeline
 
-A mathematically grounded pipeline for generating synthetic energy commodity market data, built on path signatures, variational autoencoders, and the UK electricity market.
+I am trying to make a mathematically grounded pipeline for generating synthetic energy commodity market data, built on path signatures, variational autoencoders, and the UK electricity market.(all of this is subject to change as I learn by doing!) I also want to try and learn new tools that I investigated while studying but didn't have time to learn. Hopefully the synthetic data pipeline can used with different data, e.g. equities, bonds or even sports? 
 
-## Intellectual thread
+## My historic thread
 
 This project connects three stages of prior work:
 
@@ -22,7 +22,9 @@ This project connects three stages of prior work:
 ## UK market structure (key concepts)
 
 - **Half-hourly settlement**: GB electricity clears in 48 half-hour periods per day. The System Buy/Sell Price (imbalance price) is the marginal cost of balancing in real time — highly volatile, especially with high wind penetration
-- **CfD (Contract for Difference)**: Primary renewable support mechanism. Generator receives `strike_price - market_reference_price` from LCCC (or pays back if market > strike). Payoff is a financial forward, with basis risk from curtailment
+- **CfD (Contract for Difference)**: Primary renewable support mechanism. Generator receives `strike_price - market_reference_price` from LCCC (or pays back if market > strike). Payoff is a financial forward, with basis risk from curtailment. So prices go negative and there is a policy to deal with that.
+
+These two affect supply:
 - **B6 constraint**: The Scotland-England transmission boundary. When Scottish wind exceeds transfer capacity, generators are constrained off and paid constraint payments. Creates implicit locational price separation
 - **Pumped storage**: Cruachan (660 MW, Argyll) and Dinorwig (1.8 GW, Wales) act as grid batteries — pump when prices low/negative, generate when prices high. Sets a practical floor on negative price duration and ceiling contribution to spikes
 
@@ -56,7 +58,7 @@ Replaces the adversarial discriminator with a stable, theoretically grounded dis
 
 ## Markov structure (four roles)
 
-1. **Regime switching HMM**: Hidden states (calm / volatile / spike) with learned transition matrix $\Pi$. CVAE conditioned on posterior regime probabilities from forward algorithm
+1. **Regime switching HMM**: Hidden states (calm / volatile / spike / negative) with learned transition matrix $\Pi$. CVAE conditioned on posterior regime probabilities from forward algorithm
 2. **MCMC calibration**: Bayesian posterior over model parameters via HMC/NUTS (PyMC or numpyro). Propagates uncertainty into generated path distributions
 3. **Sequential Monte Carlo**: Particle filter for online hidden state estimation as new data arrives. MCMC moves at resample step prevent degeneracy
 4. **Yardsale → LOB**: Bilateral exchange Markov chain → stationary Boltzmann-Gibbs distribution → queue level dynamics in limit order book. Connects undergrad dissertation directly to Avellaneda-Stoikov market making
@@ -78,33 +80,6 @@ Replaces the adversarial discriminator with a stable, theoretically grounded dis
 07d_option_pricing.ipynb        — CfD pricing, deep hedging
 07e_kernel_filter.ipynb         — Sig-kernel, GP regression, Kalman
 07f_avellaneda.ipynb            — Avellaneda-Stoikov market making
-```
-
-## Phase 2 extensions (after core pipeline)
-
-- Weather coupling: NWP ensemble conditioning variables (wind speed, temperature) as additional CVAE state variables
-- Hydro/pumped storage: Joint $(S_t, W_t)$ controlled diffusion, mean-field game structure for strategic operator
-- Interest rates: Same pipeline applied to FRED yield curve data (see `interest_rates/` directory)
-
-## Repository layout
-
-```
-energy-synthetic-data/
-├── README.md
-├── docs/
-│   └── diagrams/
-│       ├── 01_pipeline_architecture.svg
-│       ├── 02_notebook_structure.svg
-│       └── 03_markov_connections.svg
-├── data/                   # .gitignored
-├── notebooks/
-├── src/
-│   ├── data/               # elexon.py, carbon_intensity.py
-│   ├── signatures/         # lead_lag.py, log_sig.py
-│   ├── models/             # cvae.py, sigcwgan.py
-│   └── validation/         # mmd_test.py
-├── requirements.txt
-└── .env.example
 ```
 
 ## Key references
