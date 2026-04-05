@@ -1,0 +1,13 @@
+# Data files (stored in Google Drive, not GitHub)
+data/
+*.parquet
+*.duckdb
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Environment
+.env
