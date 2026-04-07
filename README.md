@@ -2,13 +2,18 @@
 
 A personal research project building an end-to-end pipeline for generating synthetic GB electricity price paths, with downstream applications in gas storage stochastic control and deep hedging. Built on real market data from public APIs, path signatures, conditional variational autoencoders, and deep hedging networks.
 
-This is a learning project and CV piece, not a production system. The code is honest about what works, what failed, and why — including a full diagnosis of specific failure modes in the first generative model and a redesigned empirical track to fix them.
+This is a learning project and CV piece, not a production system. The code is (I think) honest about what works, what failed, and why. I have included a diagnosis of specific failure modes in the first generative model and have been working on a redesigned empirical track to fix them. The first pipeline and its notebooks will remain unchanged and they taught me a great deal in a short period. Upon reflection I built it almost all from intuition and using papers/knowledge I had accumulated studying other things and developed an interest in. My original plan was overly ambitious and totally intuition driven, so I learnt as I went and somethings were cut or modified.
+
+I have now tried to engage with the actual current literature on the UK and European power market. A lot of my original thinking came from applying for a data job at a scottish energy firm, having a look at the energy data available and living in the north of scotland - generation is built faster than infrastructure so I know there are bottlenecks. 
+
+
+The redesigned pipeline will begin by studying the "system" that is the energy market first, discovering its signals, features, regimes, etc independent of price data. I also intend to be much more statistically rigorous - I made silly  mistakes sampling. The proper way to begin is to identify the regimes/signals independently of price data. My current regime labels are threshold rules based on prices. I need to study the dynamics of the system first. Then I can identify exegonous information among other things that can be used as conditional data - to do that I think I will make use of GARCH, ARIMA etc.
 
 ---
 
 ## Background and motivation
 
-This project connects three stages of prior work:
+This project connects multiple stages of my prior work:
 
 - **Undergrad dissertation** — Markov chain Monte Carlo agent games of wealth inequality (Yardsale model): bilateral exchange, ergodic theory, stationary distributions of interacting particle systems
 - **Masters dissertation** — Neural network option pricing in the Hull-White volatility model: FFT pricing scheme, KDE-based synthetic training data, universal approximation theorem
@@ -35,22 +40,22 @@ The choice of GB electricity is deliberate: the market has free public APIs (Ele
 
 ## What has been built — original track
 
-The first pass through the pipeline was intuition-driven: features chosen on domain reasoning, architecture adapted from Bühler et al. (2020), conditioned on what seemed plausible. It worked well enough to generate synthetic paths that pass the primary statistical test. It also produced clear, diagnosable failures that motivate the second track. That is a reasonable outcome for a first attempt on a small and structurally unusual dataset.
+The first pass through the pipeline was intuition-driven: features chosen on domain reasoning, architecture adapted from Bühler et al. (2020), conditioned on what seemed plausible. It worked well enough to generate synthetic paths that pass the primary statistical tests. It also produced clear, diagnosable failures that motivate the second track. That is an accpetable outcome for me on a first attempt on a small and structurally unusual dataset. Some of the errors were hard to identify as I created them jumping between notebooks to alter things and didn't realise the downstream consequences.
 
 | Notebook | What it does | Status |
 |---|---|---|
-| `01_data_acquisition` | Elexon Insights + Carbon Intensity APIs → parquet | ✅ |
-| `02_eda_stylized_facts` | Regime labelling, price/wind distributions, autocorrelation | ✅ |
-| `03_signature_features` | 4D lead-lag path, depth-4 log-signatures, segment generation | ✅ |
-| `04a_cvae_generator` | CVAE trained on 3,285 daily segments, ELBO + sig-MMD loss | ✅ |
-| `05_validation` | Sig-MMD, KS, Lévy area, large move rate, volatility clustering ACF | ✅ |
-| `06_scenario_database` | 10k scenarios → DuckDB | ✅ |
-| `07a_stoch_control` | 30-day gas storage LSMC valuation, regime-stratified bootstrap | ✅ |
-| `07b_sql_analytics` | DuckDB scenario analytics | ✅ |
-| `07c_portfolio` | CVaR portfolio optimisation | 📋 planned |
-| `07d_deep_hedging` | Deep hedging network on Schwartz OU paths | ✅ (to be revised) |
-| `07e_kernel_filter` | Sig-kernel GP regression, Kalman filter | 📋 planned |
-| `07f_avellaneda` | Avellaneda-Stoikov market making | 📋 planned |
+| `01_data_acquisition` | Elexon Insights + Carbon Intensity APIs → parquet | Done |
+| `02_eda_stylized_facts` | Regime labelling, price/wind distributions, autocorrelation | Done |
+| `03_signature_features` | 4D lead-lag path, depth-4 log-signatures, segment generation | Done |
+| `04a_cvae_generator` | CVAE trained on 3,285 daily segments, ELBO + sig-MMD loss | Done |
+| `05_validation` | Sig-MMD, KS, Lévy area, large move rate, volatility clustering ACF | Done |
+| `06_scenario_database` | 10k scenarios → DuckDB | Done |
+| `07a_stoch_control` | 30-day gas storage LSMC valuation, regime-stratified bootstrap | Done |
+| `07b_sql_analytics` | DuckDB scenario analytics | Done |
+| `07c_portfolio` | CVaR portfolio optimisation | planned |
+| `07d_deep_hedging` | Deep hedging network on Schwartz OU paths | Done (to be revised) |
+| `07e_kernel_filter` | Sig-kernel GP regression, Kalman filter |  planned |
+| `07f_avellaneda` | Avellaneda-Stoikov market making | planned |
 
 ### Validation results (notebook 05)
 
@@ -69,7 +74,7 @@ A note on the KS dimension count: the depth-4 log-signature of a 4D lead-lag pat
 
 The Sig-MMD result (p = 0.84) is the primary result: the joint distribution of generated paths is statistically indistinguishable from real paths under the signature kernel. The KS failures and heavy-tail misses are expected — VAEs compress variance because the KL term pushes the posterior toward the uninformative prior, smoothing away extreme events. These are known VAE limitations, not bugs.
 
-**The key finding — volatility clustering:**
+**My key finding — volatility clustering:**
 
 The ACF of |Lévy area| (∝ |realised variance|) shows real data with clear positive autocorrelation persisting out to 20 weeks. The generated series is near zero at all lags. This is not a tuning failure — it is architectural. A VAE samples z ~ N(0,I) independently per segment. The ELBO has no term penalising inter-segment temporal correlations. Volatility clustering is an inter-segment property. No amount of feature engineering fixes this. It requires a different model class.
 
@@ -87,17 +92,17 @@ The project uses Markov and Bayesian methods in four distinct roles. These were 
 
 **2. MCMC calibration — not yet implemented.** The intended role is Bayesian posterior estimation over model parameters via HMC/NUTS (PyMC or numpyro), propagating parameter uncertainty into the generated path distributions. This connects directly to the undergrad dissertation (MCMC as the inference engine) and to the masters dissertation (uncertainty quantification in option pricing). Currently all model parameters are point estimates.
 
-**3. Sequential Monte Carlo — not yet implemented.** A particle filter for online hidden state estimation as new data arrives, with MCMC moves at the resample step to prevent particle degeneracy. This would allow regime conditioning to update in real time rather than being fixed at training — relevant for deployment rather than backtesting.
+**3. Sequential Monte Carlo — not yet implemented.** A particle filter for online hidden state estimation as new data arrives, with MCMC moves at the resample step to prevent particle degeneracy. This would allow regime conditioning to update in real time rather than being fixed at training — relevant for deployment rather than backtesting. (Stochastic filtering always intrigued me and I am shoehorning it in.)
 
-**4. Yardsale → limit order book — not yet implemented.** The Yardsale bilateral exchange Markov chain from the undergrad dissertation has a Boltzmann-Gibbs stationary distribution over wealth. The mapping to queue-level dynamics in a limit order book connects to the Avellaneda-Stoikov framework in the planned notebook 07f. This is the most speculative of the four roles and the furthest from the core pipeline.
+**4. Yardsale → limit order book — not yet implemented.** The Yardsale bilateral exchange Markov chain from the undergrad dissertation has a Boltzmann-Gibbs stationary distribution over wealth. The mapping to queue-level dynamics in a limit order book connects to the Avellaneda-Stoikov framework in the planned notebook 07f. This is the most speculative of the four roles and the furthest from the core pipeline. (At the time the Fokker-Planck and Boltzmann math was beyond me (I was warned off it by my supervisor), but it continues to annoy me that I haven't understood it or coded it.)
 
 ---
 
-## What is being built next — empirical track
+## What is being built next — A more empirical and cautious attack
 
-The original track remains untouched and runnable. The enhanced track runs in parallel with `_wind` suffixed outputs. **None of it has been written yet.** After completing the first pass, I stepped back to identify what the failures actually meant before writing more code.
+The original track remains untouched and runnable. The enhanced track runs in parallel with `_wind` suffixed outputs. **None of it has been pushed yet.** After completing the first pass, I stepped back to identify what the failures actually meant before writing more code. This plan is obviously subejct to change and definitely will as I learn more.
 
-The design principle for the second track is empirical rather than intuitive: every modelling choice — which variables to condition on, what segment length to use, how to represent wind, which volatility model to use — is derived from data using classical econometric tests, not asserted on domain grounds. The output of that investigation is `feature_analysis.json`, which drives the architecture of 04b, rather than the architecture driving the feature choices.
+The design principle for the second track is empirical rather than intuitive: every modelling choice — which variables to condition on, what segment length to use, how to represent wind, which volatility model to use — is derived from data using classical econometric tests, not asserted or intuited on domain grounds. The output of that investigation is `feature_analysis.json`, which drives the architecture of 04b, rather than the architecture driving the feature choices.
 
 ```
 02  EDA + econometrics + feature selection + segment generation
@@ -114,15 +119,15 @@ The design principle for the second track is empirical rather than intuitive: ev
 
 ### Notebook 02 — what the econometric investigation covers
 
-The overhaul of notebook 02 replaces descriptive EDA with a structured investigation whose primary output is `feature_analysis.json` — the empirically derived conditioning vector for 04b. Segment generation also moves here from notebook 03, so the reasoning from data to modelling decision is visible in one place.
+The new notebook 02 replaces descriptive EDA with a structured investigation whose primary output is `feature_analysis.json` — the empirically derived conditioning vector for 04b. Segment generation also moves here from notebook 03, so the reasoning from data to modelling decision is visible in one place.
 
-**Exogenous vs endogenous.** The 86-column dataset contains balancing mechanism outcomes (accepted bid/offer volumes, adjustment data, net imbalance volume) determined simultaneously with price by the same market clearing. Using them as conditioning variables is look-ahead bias and circular by construction. Every column is screened against four criteria: (1) expressible as a scalar at segment level, (2) no look-ahead, (3) not redundant with another candidate, (4) predictive of the log-signature in regression. Variables must pass all four.
+**Exogenous vs endogenous.** The 86-column dataset contains balancing mechanism outcomes (accepted bid/offer volumes, adjustment data, net imbalance volume) determined simultaneously with price by the same market clearing. Using them as conditioning variables is look-ahead bias and circular by construction. Every column will be screened against four criteria: (1) expressible as a scalar at segment level, (2) no look-ahead, (3) not redundant with another candidate, (4) predictive of the log-signature in regression. Variables must pass all four.
 
 **Pumped storage as a market signal.** Pumped storage (Cruachan 660 MW, Dinorwig 1.8 GW) pumps when prices are low or negative and generates when prices are high. The raw contemporaneous signal is endogenous. The lagged sign — what the plant did in the previous segment — is exogenous and carries information about whether the previous period was cheap enough to charge: a proxy for the demand-side conditions that produce negative prices, without look-ahead.
 
-**Wind as the principal exogenous driver.** `total_wind_mw` from the Elexon Insights API is not merely a proxy for wind speed. The GB grid operator has already aggregated output across hundreds of geographically distributed wind farms spanning the full GB landmass, and expressed the result in MW of actual generation — a capacity-weighted, economically normalised measure accounting for the nonlinear relationship between wind speed and power output via the installed fleet's power curves. The result encodes the same meteorological information as gridded weather reanalysis data (ERA5, Met Office UKV), accessible via a single API call, in units directly relevant to price formation.
+**Wind as the principal exogenous driver.** `total_wind_mw` from the Elexon Insights API is not merely a proxy for wind speed. The GB grid operator has already aggregated output across hundreds of geographically distributed wind farms spanning the full GB landmass, and expressed the result in MW of actual generation — a capacity-weighted, economically normalised measure accounting for the nonlinear relationship between wind speed and power output via the installed fleet's power curves. The result encodes the same meteorological information as gridded weather reanalysis data (ERA5, Met Office UKV), accessible via a single API call, in units directly relevant to price formation. So I don't think there is any need to go digging in weather data.
 
-Two layers of meteorological structure are extractable from this signal. The mean dynamics — frontal passage timescales (1–2.5 days), synoptic cycles (3–7 days), seasonal patterns — are captured by fitting ARMA(p,q) on wind output levels. This is why the ACF of real |Lévy area| shows ~2–3 week periodicity: it is the autocorrelation of meteorological regimes encoded in the generation signal. The variance dynamics — how erratically wind output changes — correspond to unstable weather fronts and are the meteorological analogue of volatility clustering. A GARCH-X variant with wind output in the variance equation extracts this. Both conditioning signals are tested as candidates for 04b.
+Two layers of meteorological structure are extractable from this signal. The mean dynamics — frontal passage timescales (1–2.5 days), synoptic cycles (3–7 days), seasonal patterns I think can be captured by fitting ARMA(p,q) on wind output levels. This is why the ACF of real |Lévy area| shows ~2–3 week periodicity: it is the autocorrelation of meteorological regimes encoded in the generation signal. The variance dynamics — how erratically wind output changes — correspond to unstable weather fronts and are the meteorological analogue of volatility clustering. A GARCH-X variant with wind output in the variance equation would extract this. Both conditioning signals are tested as candidates for 04b.
 
 **Volatility model selection.** Does GB half-hourly electricity follow GARCH, EGARCH, or GJR-GARCH? Decided by AIC/BIC and ARCH-LM test, not assumption.
 
