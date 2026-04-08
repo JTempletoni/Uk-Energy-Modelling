@@ -17,7 +17,7 @@ This project connects multiple stages of my prior work:
 
 - **Undergrad dissertation** — Markov chain Monte Carlo agent games of wealth inequality (Yardsale model): bilateral exchange, ergodic theory, stationary distributions of interacting particle systems
 - **Masters dissertation** — Neural network option pricing in the Hull-White volatility model: FFT pricing scheme, KDE-based synthetic training data, universal approximation theorem
-- **This project** — both threads meet. Markov regime switching for non-stationarity. Path signatures as the rigorous feature map for sequential data (grounded in the same UAT as the masters dissertation). VAE/GAN generative models. Applied to real UK energy market data with downstream applications in stochastic control and derivatives hedging
+- **This project** — both threads meet. Markov regime switching for non-stationarity. Path signatures as the rigorous feature map for sequential data (grounded in the same UAT as the masters dissertation). VAE/GAN generative models. Applied to real UK energy market data with downstream applications in stochastic control and derivatives hedging.
 
 The choice of GB electricity is deliberate: the market has free public APIs (Elexon Insights, Carbon Intensity), is structurally interesting (negative prices, wind cannibalisation, CfD policy), and the data is genuinely hard to model — which makes it a better test of the methods than equity indices.
 
@@ -40,7 +40,7 @@ The choice of GB electricity is deliberate: the market has free public APIs (Ele
 
 ## What has been built — original track
 
-The first pass through the pipeline was intuition-driven: features chosen on domain reasoning, architecture adapted from Bühler et al. (2020), conditioned on what seemed plausible. It worked well enough to generate synthetic paths that pass the primary statistical tests. It also produced clear, diagnosable failures that motivate the second track. That is an accpetable outcome for me on a first attempt on a small and structurally unusual dataset. Some of the errors were hard to identify as I created them jumping between notebooks to alter things and didn't realise the downstream consequences.
+The first pass through the pipeline was intuition-driven: features chosen on domain reasoning, architecture adapted from Bühler et al. (2020), conditioned on what seemed plausible. It worked well enough to generate synthetic paths that pass the primary statistical tests. It also produced clear, diagnosable failures that motivate the second track. That is an acceptable outcome for me on a first attempt on a small and structurally unusual dataset. Some of the errors were hard to identify as I created them jumping between notebooks to alter things and didn't realise the downstream consequences.
 
 | Notebook | What it does | Status |
 |---|---|---|
@@ -70,7 +70,7 @@ The first pass through the pipeline was intuition-driven: features chosen on dom
 | Kurtosis | FAIL |
 | **Overall** | **4 / 6 stylized checks pass** |
 
-A note on the KS dimension count: the depth-4 log-signature of a 4D lead-lag path has 90 dimensions, but 59 are structural zeros — identically zero by the antisymmetry properties of the lead-lag construction, carrying no distributional information. Notebook 04a drops them before training. The KS test therefore runs on the 31 informative dimensions. This is the correct behaviour; it is documented here because the silent reduction from 90 to 31 is not obvious from the notebook output alone.
+A note on the KS dimension count: the depth-4 log-signature of a 4D lead-lag path has 90 dimensions, but 59 are structural zeros — identically zero by the antisymmetry properties of the lead-lag construction, carrying no distributional information. Notebook 04a drops them before training. The KS test therefore runs on the 31 informative dimensions. This is the correct behaviour; it is documented here because the silent reduction from 90 to 31 is not obvious from the notebook output alone.The reason ther are lots of print statements is so I can determine what is going on accurately - learning what to print and when is also something I am learning along the way.
 
 The Sig-MMD result (p = 0.84) is the primary result: the joint distribution of generated paths is statistically indistinguishable from real paths under the signature kernel. The KS failures and heavy-tail misses are expected — VAEs compress variance because the KL term pushes the posterior toward the uninformative prior, smoothing away extreme events. These are known VAE limitations, not bugs.
 
@@ -92,15 +92,15 @@ The project uses Markov and Bayesian methods in four distinct roles. These were 
 
 **2. MCMC calibration — not yet implemented.** The intended role is Bayesian posterior estimation over model parameters via HMC/NUTS (PyMC or numpyro), propagating parameter uncertainty into the generated path distributions. This connects directly to the undergrad dissertation (MCMC as the inference engine) and to the masters dissertation (uncertainty quantification in option pricing). Currently all model parameters are point estimates.
 
-**3. Sequential Monte Carlo — not yet implemented.** A particle filter for online hidden state estimation as new data arrives, with MCMC moves at the resample step to prevent particle degeneracy. This would allow regime conditioning to update in real time rather than being fixed at training — relevant for deployment rather than backtesting. (Stochastic filtering always intrigued me and I am shoehorning it in.)
+**3. Sequential Monte Carlo — not yet implemented.** A particle filter for online hidden state estimation as new data arrives, with MCMC moves at the resample step to prevent particle degeneracy. This would allow regime conditioning to update in real time rather than being fixed at training — relevant for deployment rather than backtesting. (Stochastic filtering always intrigued me and I am determined to come to grips with it.)
 
-**4. Yardsale → limit order book — not yet implemented.** The Yardsale bilateral exchange Markov chain from the undergrad dissertation has a Boltzmann-Gibbs stationary distribution over wealth. The mapping to queue-level dynamics in a limit order book connects to the Avellaneda-Stoikov framework in the planned notebook 07f. This is the most speculative of the four roles and the furthest from the core pipeline. (At the time the Fokker-Planck and Boltzmann math was beyond me (I was warned off it by my supervisor), but it continues to annoy me that I haven't understood it or coded it.)
+**4. Yardsale → limit order book — not yet implemented.** The Yardsale bilateral exchange Markov chain from the undergrad dissertation has a Boltzmann-Gibbs stationary distribution over wealth. The mapping to queue-level dynamics in a limit order book connects to the Avellaneda-Stoikov framework in the planned notebook 07f. This is the most speculative of the four roles and the furthest from the core pipeline. At the time the Fokker-Planck derivation and Boltzmann modelling was beyond me (I was warned off wasting time on something beyond the scope of the project by my supervisor), but it continues to annoy me that I haven't tackled it and that is why this notebook will exist.
 
 ---
 
 ## What is being built next — A more empirical and cautious attack
 
-The original track remains untouched and runnable. The enhanced track runs in parallel with `_wind` suffixed outputs. **None of it has been pushed yet.** After completing the first pass, I stepped back to identify what the failures actually meant before writing more code. This plan is obviously subejct to change and definitely will as I learn more.
+The original track remains untouched and runnable. The enhanced track runs in parallel with `_wind` suffixed outputs. **None of it has been pushed yet.** After completing the first pass, I stepped back to identify what the failures actually meant before writing more code. This plan is subject to change and will evolve as I learn more.
 
 The design principle for the second track is empirical rather than intuitive: every modelling choice — which variables to condition on, what segment length to use, how to represent wind, which volatility model to use — is derived from data using classical econometric tests, not asserted or intuited on domain grounds. The output of that investigation is `feature_analysis.json`, which drives the architecture of 04b, rather than the architecture driving the feature choices.
 
