@@ -2,12 +2,14 @@
 
 A personal research project building an end-to-end pipeline for generating synthetic GB electricity price paths, with downstream applications in gas storage stochastic control and deep hedging. Built on real market data from public APIs, path signatures, conditional generative models (CVAE, SigCWGAN, neural SDE), and deep hedging networks.
 
-This is a personal learning project, not a production system. The code is (I think) honest about what works, what failed, and why. I have included a diagnosis of specific failure modes in the first generative model and have been working on a redesigned empirical track to fix them. The first pipeline and its notebooks will remain unchanged and they taught me a great deal in a short period. Upon reflection I built it almost all from intuition and using papers/knowledge I had accumulated studying other things and developed an interest in. My original plan was overly ambitious and totally intuition driven, so I learnt as I went and somethings were cut or modified. My ambition is also limited by the limits of Colab pro.
+This is a personal learning project, not a production system. The code is (I think) honest about what works, what failed, and why. I have included a diagnosis of specific failure modes in the first generative model and have been working on a redesigned empirical track to fix them. The first pipeline and its notebooks will remain unchanged and they taught me a great deal in a short period. Upon reflection I built it almost all from intuition and using papers/knowledge I had accumulated studying other things and developed an interest in. My original plan was overly ambitious and totally intuition driven, so I learnt as I went and some things were cut or modified. My ambition is also limited by the compuational limits of Colab pro.
 
-I have now tried to engage with the current literature on the UK and European power markets. A lot of my original thinking came from applying for a data job at a scottish energy firm, having a look at the energy data available and living in the north of scotland - generation is built faster than infrastructure so I know there are bottlenecks. 
+I have now tried to engage with the current literature on the UK and European power markets. A lot of my original thinking came from applying for a data job at a scottish energy firm, having a look at the energy data available and living in the north of scotland - generation is built faster than infrastructure so I know there are bottlenecks, so how does that effect the market? A further rabbit hole I went  down was investigating when excess energy is used to fill dams for later release.
 
 
 The redesigned pipeline will begin by studying the "system" that is the energy market first, discovering its signals, features, regimes, etc independent of price data. I also intend to be much more statistically rigorous - I made silly  mistakes sampling. The proper way to begin is to identify the regimes/signals independently of price data. My current regime labels are threshold rules based on prices. I need to study the dynamics of the system first. Then I can identify exegonous information among other things that can be used as conditional data - to do that I think I will make use of GARCH, ARIMA etc.
+
+A final note - I am learning as I go, and learning what I need to learn is a big part of that. I am trying to build a functional synthetic data pipeline, then I can use that pipeline to explore areas of mathematics that have interested me. I have learnt though, I learnt tha CVAE was the wrong approach, so I went and seriously studied the data first, then trained a much better CVAE. However the CVAE doesn't capture the necessary properties, so I have a plan for sigCWGAN and then a Neural SDE. There is more about this below.
 
 ---
 
@@ -100,7 +102,7 @@ Training on model-generated outputs, or augmenting with synthetic data without v
 
 ## Markov structure — four roles
 
-The project uses Markov and Bayesian methods in four distinct roles. These were planned from the outset; they are implemented to varying degrees.
+The project uses Markov and Bayesian methods in four distinct roles. These were planned from the outset; they are implemented to varying degrees. Once I have a succesful data pipeline I will build them all.
 
 **1. Regime switching HMM — partially implemented.** The four regimes (calm / volatile / spike / negative) are currently identified by rule-based thresholds: an adaptive 5-MAD threshold with a hard £300/MWh floor for spikes, and a −£20/MWh floor for negative prices. Segment regime is assigned by a priority rule (any spike half-hour → spike segment; any negative → negative; any volatile → volatile; else calm) rather than majority vote, which always returns calm because 88.6% of half-hours are calm. The empirical Markov transition matrix between consecutive segment regimes is computed in notebook 05 as a validation diagnostic. What is not yet implemented is replacing the rule-based labels with posterior probabilities from the forward algorithm — so the CVAE conditioning is probabilistic rather than hard-labelled. This is a planned improvement for the enhanced track.
 
@@ -114,9 +116,9 @@ The project uses Markov and Bayesian methods in four distinct roles. These were 
 
 ## The four streams — why each one exists
 
-The original pipeline is one CVAE. The full project is four generative streams, each fixing a specific failure of the previous one. They share `master.parquet`, `02_eda_stylized_facts` (re-run with the proper econometric investigation), and the same downstream notebooks (06, 07a, 07b, 07d). Only the generator changes.
+The original pipeline is one CVAE. The full project is four generative streams, each (hopefully) fixing a specific failure of the previous one. They share `master.parquet`, `02_eda_stylized_facts` (re-run with the proper econometric investigation), and the same downstream notebooks (06, 07a, 07b, 07d). Only the generator changes.
 
-The point of doing this as four streams rather than picking one and committing isn't completionism — it's that I want concrete, measured statements about what each model class buys you and what it costs, rather than asserting one is best on theoretical grounds. Each stream addresses a known weakness of its predecessor, and the comparison notebook `08_stream_comparison` is the final deliverable that ties them together.
+The point of doing this as four streams rather than picking one and committing is that I want measured statements about what each model class buys you and what it costs, rather than asserting one is best on theoretical grounds. Each stream (hopefully) addresses a known weakness of its predecessor, and the comparison notebook `08_stream_comparison` is the final deliverable that ties them together. Again, my effort to measure and analyse the results is driven by my desire to learn - so there is a lot of print statements and plots.
 
 ```
 stream 1 — CVAE (intuition-driven)               ← done, frozen baseline
@@ -125,7 +127,7 @@ stream 3 — SigCWGAN (autoregressive)             ← in progress
 stream 4 — Neural SDE (continuous time)          ← planned
 ```
 
-None of streams 2–4 has been pushed to GitHub yet. The original track remains untouched and runnable.
+No part of streams 3 and 4 have been pushed to GitHub yet. The original track remains untouched and runnable.
 
 ---
 
@@ -144,7 +146,7 @@ The screen for any candidate variable is four conditions, all of which must hold
 
 The balancing-mechanism columns (accepted bid/offer volumes, net imbalance volume, system buy/sell prices) all fail condition 2 — they are determined simultaneously with price in the same auction. Using them as conditioning variables is look-ahead bias and circular by construction. Stream 1 used some of them. Stream 2 doesn't.
 
-**Wind, properly understood.** I had been thinking of `total_wind_full_mw` as a proxy for wind speed and considering whether to go and download ERA5 reanalysis. I now think this is wrong-headed. The grid operator has already aggregated output across hundreds of geographically distributed wind farms spanning the full GB landmass and expressed the result in MW of actual generation — a capacity-weighted, economically normalised measure that encodes the nonlinear relationship between wind speed and power output via the fleet's power curves. It is the same meteorological information as gridded reanalysis, in units that are directly relevant to price formation, accessible via one API call. There is no need to go digging in weather data.
+**Wind, properly understood.** I had been thinking of `total_wind_full_mw` as a proxy for wind speed and considering whether to go and download ERA5 reanalysis. I now think this is wrong. The grid operator has already aggregated output across hundreds of geographically distributed wind farms spanning the full GB landmass and expressed the result in MW of actual generation — a capacity-weighted, economically normalised measure that encodes the nonlinear relationship between wind speed and power output via the fleet's power curves. It is the same meteorological information as gridded reanalysis, in units that are directly relevant to price formation, accessible via one API call. There is no need to go digging in weather data.
 
 Two layers of meteorological structure are extractable from this signal. The mean dynamics — frontal passage timescales (1–2.5 days), synoptic cycles (3–7 days), seasonal patterns — can be captured by an ARMA(p,q) on wind output levels. This is why the ACF of real |Lévy area| shows ~2–3 week periodicity: it is the autocorrelation of meteorological regimes encoded in the generation signal. The variance dynamics — how erratically wind changes — correspond to unstable weather fronts and are the meteorological analogue of volatility clustering, which is why a GARCH-X variant with wind in the variance equation is the right thing to fit.
 
@@ -212,7 +214,7 @@ This is **not** a separate prerequisite notebook — the Hawkes fit and intensit
 
 ### Stream 4 — Neural SDE
 
-**Why this one.** The neural SDE is the mathematical closure of the project. Stream 1, stream 2 and stream 3 are all discrete-segment generators: they emit one segment at a time and you stitch them together. The deep hedging notebook 07d, on the other hand, currently trains its hedging agent on **continuous-time** Schwartz one-factor OU paths
+**Why this one.** The neural SDE is the mathematical closure of the project. Stream 1, stream 2 and stream 3 are all discrete-segment generators: they emit one segment at a time and you stitch them together. The deep hedging notebook 07d, on the other hand, currently trains its hedging agent on **continuous-time** Schwartz one-factor OU paths. 
 
 $$
 dS_t \;=\; \kappa\,(\theta - S_t)\,dt \;+\; \sigma\,dW_t
