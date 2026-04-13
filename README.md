@@ -113,20 +113,6 @@ Training on model-generated outputs, or augmenting with synthetic data without v
 
 ---
 
-## Markov structure — four roles
-
-The project uses Markov and Bayesian methods in four distinct roles. They were planned from the outset and are implemented to varying degrees; all four are scheduled for completion once the core pipeline is stable.
-
-**1. Regime switching HMM — partially implemented.** Four regimes (calm / volatile / spike / negative), currently identified by rule-based thresholds (adaptive 5-MAD with a £300/MWh floor for spikes, −£20/MWh for negatives). Segment regime is assigned by a priority rule (any spike half-hour → spike, etc.) rather than majority vote, which would always return calm because 88.6% of half-hours are calm. The empirical Markov transition matrix between consecutive segment regimes is computed in notebook 05 as a validation diagnostic. Planned upgrade: replace the rule-based labels with posterior probabilities from the forward algorithm so the CVAE conditioning becomes probabilistic rather than hard-labelled.
-
-**2. MCMC calibration — not yet implemented.** Bayesian posterior estimation over model parameters via HMC/NUTS (PyMC or numpyro), propagating parameter uncertainty into the generated path distributions. Connects directly to the undergrad dissertation (MCMC as the inference engine) and to the masters dissertation (uncertainty quantification in option pricing). Currently all model parameters are point estimates.
-
-**3. Sequential Monte Carlo — not yet implemented.** A particle filter for online hidden state estimation as new data arrives, with MCMC moves at the resample step to prevent particle degeneracy. Allows regime conditioning to update in real time rather than being fixed at training — relevant for deployment rather than backtesting. Stochastic filtering has always intrigued me and is on the must-learn list.
-
-**4. Yardsale → limit order book — not yet implemented.** The Yardsale bilateral exchange Markov chain from the undergrad dissertation has a Boltzmann-Gibbs stationary distribution over wealth. The mapping to queue-level dynamics in a limit order book connects to the Avellaneda-Stoikov framework in the planned notebook 07f. The most speculative of the four roles and the furthest from the core pipeline; included because it is the loose end I most want to tie up.
-
----
-
 ## The four streams — why each one exists
 
 The original pipeline is one CVAE. The full project is four generative streams, each fixing a specific failure of the previous one. They share `master.parquet`, `02_eda_stylized_facts` (re-run with the proper econometric investigation), and the same downstream notebooks (06, 07a, 07b, 07d). Only the generator changes.
@@ -309,6 +295,20 @@ with $f_\theta$, $g_\phi$ tanh-MLPs ($g_\phi$ softplus-positive), trained to min
 - **B6 constraint**: Scotland-England transmission boundary. When Scottish wind exceeds capacity, generators are constrained off — creating implicit locational price separation not visible in the aggregate system price.
 - **Pumped storage**: Cruachan (660 MW) and Dinorwig (1.8 GW) arbitrage price spikes. Sets a practical floor on negative price duration and ceiling on spike duration — both regime properties the model needs to reproduce. The signed `ps_net_mw` from the NESO Historic Demand join is what makes this visible to the conditioning vector.
 - **Embedded generation**: Distribution-connected wind and solar (~5–7 GW of embedded wind, growing solar fleet) do not appear in the Elexon transmission-level fuel mix and have to be added in from the NESO feed, otherwise the renewable share is materially understated.
+
+---
+
+## Markov structure — four roles
+
+The project uses Markov and Bayesian methods in four distinct roles. They were planned from the outset and are implemented to varying degrees; all four are scheduled for completion once the core pipeline is stable.
+
+**1. Regime switching HMM — partially implemented.** Four regimes (calm / volatile / spike / negative), currently identified by rule-based thresholds (adaptive 5-MAD with a £300/MWh floor for spikes, −£20/MWh for negatives). Segment regime is assigned by a priority rule (any spike half-hour → spike, etc.) rather than majority vote, which would always return calm because 88.6% of half-hours are calm. The empirical Markov transition matrix between consecutive segment regimes is computed in notebook 05 as a validation diagnostic. Planned upgrade: replace the rule-based labels with posterior probabilities from the forward algorithm so the CVAE conditioning becomes probabilistic rather than hard-labelled.
+
+**2. MCMC calibration — not yet implemented.** Bayesian posterior estimation over model parameters via HMC/NUTS (PyMC or numpyro), propagating parameter uncertainty into the generated path distributions. Connects directly to the undergrad dissertation (MCMC as the inference engine) and to the masters dissertation (uncertainty quantification in option pricing). Currently all model parameters are point estimates.
+
+**3. Sequential Monte Carlo — not yet implemented.** A particle filter for online hidden state estimation as new data arrives, with MCMC moves at the resample step to prevent particle degeneracy. Allows regime conditioning to update in real time rather than being fixed at training — relevant for deployment rather than backtesting. Stochastic filtering has always intrigued me and is on the must-learn list.
+
+**4. Yardsale → limit order book — not yet implemented.** The Yardsale bilateral exchange Markov chain from the undergrad dissertation has a Boltzmann-Gibbs stationary distribution over wealth. The mapping to queue-level dynamics in a limit order book connects to the Avellaneda-Stoikov framework in the planned notebook 07f. The most speculative of the four roles and the furthest from the core pipeline; included because it is the loose end I most want to tie up.
 
 ---
 
