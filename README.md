@@ -2,7 +2,37 @@
 
 An end-to-end research pipeline for generating synthetic GB electricity price paths and using them in downstream gas storage stochastic control and deep hedging. The project starts from free public UK electricity-market data, builds a shared econometric and event-risk backbone, and then swaps different **Layer 3** generative models on top of the same market structure.
 
-This repository is not a production system. It is a research build, a learning log, and a portfolio project. The point is not to hide the failed ideas. The point is to keep the failed ideas runnable, diagnose why they failed, and then make the next architecture answer a concrete measured weakness rather than just chasing a new model because it sounds fancier.
+This repository is a research build, a learning log, and a portfolio project. The point is not to hide the failed ideas. The point is to keep the failed ideas runnable, diagnose why they failed, and then make the next architecture answer a concrete measured weakness rather than just chasing a new model because it sounds fancier.
+
+
+---
+## About this project
+
+This is not a production system and it is not meant to read like one. It is a personal research project built partly to produce a working simulator for GB electricity prices, and partly as a way of learning the mathematics and modelling ideas I most wanted to go deeper on. I would rather keep the real sequence of ideas, mistakes, dead ends, and rebuilds visible than pretend the final structure appeared fully formed.
+
+The project started from a fairly concrete place. I was applying for energy and data roles, looking at publicly available GB electricity market data, and realised that this market is unusually well suited to serious experimentation: the APIs are free, the price process is structurally awkward, negative prices are real, wind matters, transmission constraints matter, and the data forces you to confront regime changes, volatility clustering, and event-driven behaviour rather than hiding them.
+
+That is exactly why I kept going. GB electricity is not a convenient toy dataset. It is difficult in the right way. The project became a way to study how generative models behave when the underlying market genuinely has jumps, state changes, weather dependence, and policy-driven distortions.
+
+I have left the failed and superseded stages visible on purpose. Stream 1 is still in the repo because the point is not to hide what did not work. The point is to show what each architecture could and could not do, what was learned from that, and why the later streams exist.
+
+---
+
+## Background and Motivation
+
+This project sits at the intersection of several things I have been building toward for a while.
+
+My undergraduate dissertation was on a stochastic exchange model of wealth inequality, so discrete random systems, Monte Carlo simulation, ergodicity, and state transitions were already natural objects for me. My postgraduate work then moved much further into mathematical finance: stochastic calculus, derivative pricing, econometrics, numerical methods, and neural-network-based option pricing. Rough paths, signatures, and generative models arrived later, but once they did, they felt like the right language for sequential market data. They were things I read about and grew seriously interested in.
+
+That is part of why this project exists in this form. It is not just “an energy market repo”. It is where several mathematical threads and interests of mine meet:
+
+-stochastic processes and state dynamics
+-econometrics and volatility modelling
+-path signatures and rough-path ideas
+-generative modelling for sequential data
+-stochastic control and deep hedging
+
+The project is therefore doing two jobs at once: building a simulator for a difficult real market, and serving as a serious learning vehicle for the mathematics I want to keep developing.
 
 ---
 
@@ -140,7 +170,7 @@ This is now a settled part of the repo and one of the most important updates rel
 
 The project **does not use Hawkes as the shipped Layer 2 event engine**.
 
-A classical 2D Hawkes attempt was explored and then dropped because it did not hold up well enough as the load-bearing event layer. The project now uses **two discrete-time LogisticHazard models on the native half-hour grid**:
+A classical 2D Hawkes attempt was explored Hawkes route was explored but the package/library path never became reliable enough to use. The project now uses **two discrete-time LogisticHazard models on the native half-hour grid**:
 
 - one for `spike_start`
 - one for `neg_start`
@@ -306,7 +336,7 @@ Even a partial success would be valuable. If Stream 5 clearly helps with tails a
 
 ## Project B — the informed rebuild
 
-Project B is the long-run rebuild that starts from what the earlier streams have actually taught rather than from what I originally hoped would work.
+Project B is my long term planned (aspirational) rebuild that starts from what the earlier streams have actually taught rather than from what I originally hoped would work.
 
 The core idea is straightforward:
 
@@ -321,7 +351,7 @@ The planned structure is:
 
 This is not there because “bigger architecture = better”. It is there because the existing streams increasingly suggest that the hard part of the market is the concentrated jumpy behaviour, not a slightly more complicated continuous diffusion.
 
-Project B therefore exists as the architecture most informed by the current negative evidence:
+Project B therefore exists as the architecture most informed by the current evidence:
 
 - CVAE was too disconnected across segments,
 - SigCWGAN was useful but still limited in geometry,
@@ -394,6 +424,35 @@ The current order of work is:
 5. then decide whether the right future move is a Stream 5 winner, a later raw-path SigCWGAN revisit, or the fuller Project B jump architecture.
 
 That is a much cleaner position than the project was in originally. The failures are narrower, the comparisons are fairer, and the next step is motivated by what the data and validators actually said.
+
+
+---
+## Things I had hoped to do
+
+The main research bottleneck is still the generator itself: variance matching, jump behaviour, and higher-order path geometry are not yet fully settled across Streams 3–5. Until that is resolved, there is limited value in pushing further downstream notebooks too hard. In practical terms, there is no point polishing portfolio, filtering, or market-making extensions on top of a simulator that is still being improved. I had/have plans for the following as I am interested in them:
+
+- 07b_sql_analytics
+  This notebook is built and still useful. Its role is mainly to query, inspect, and summarise generated scenarios once they have been written to the database. That makes it good supporting infrastructure, but it is not where the current modelling risk sits. For now it stays in maintenance mode while the main effort stays on the core generator comparison.
+
+- 07c_portfolio
+  This notebook is on hold until the cross-stream comparison is complete and a stronger generator has been chosen. Portfolio CVaR analysis is downstream of the simulation problem. The intention is to reopen this once the comparison has produced a clearer winner.
+
+- 07e_kernel_filter
+  This notebook remains on hold as a mathematically interesting extension rather than a near-term priority. Signature-kernel filtering and state-estimation ideas are still very much part of the broader scope of the project, which is realistic path generation for valuation and deep hedging. For that reason it is being deferred - I am still really interesting in learning this tool though.
+
+- 07f_avellaneda
+  This notebook is also on hold. It sits furthest from the current core pipeline and depends even more heavily on having a simulator that can already be trusted. The market-making angle is still interesting, and it does connect naturally to the wider themes behind the project and my prior academic mathematical interests, but here it is clearly a later-stage add-on rather than part of the mainline build. It does 
+
+--- 
+## Notes on style and process
+
+A few things are deliberate throughout the notebooks and write-up.
+
+The notebooks are print-heavy. That is intentional. Part of the work here has been learning what to inspect, what to plot, and which diagnostics actually tell you something.
+Diagnosed failures are kept in view. When a model class fails for structural reasons, that is part of the project result.
+The narrative is honest about what is finished and what is not. Some notebooks are stable, some are exploratory, and some are parked on purpose. I would rather flag that openly than make the repo look tidier than it really is.
+
+The project is ambition-bounded by being one person on finite compute. Colab Pro, A100 sessions, and practical library constraints have shaped some decisions. 
 
 ---
 
