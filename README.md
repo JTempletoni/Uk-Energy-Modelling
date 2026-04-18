@@ -261,13 +261,13 @@ SigCWGAN is a real improvement on the older CVAE path. The project is not stuck 
 
 ### 6. A clearer research direction
 
-The failures are now much sharper. The recurring miss is not “these models do not train”. It is “these models struggle to reproduce concentrated volatility episodes, dispersion, and higher-order path geometry”.
+The recurring issue is not “these models do not train”. It is “these models struggle to reproduce concentrated volatility episodes, dispersion, and higher-order path geometry”.
 
-That kind of clarity is progress.
+I am still learning and improving.
 
 ---
 
-## What the project has learned
+## What the project has taught me
 
 This section matters because the project is now as much about diagnosed structure as it is about finished code.
 
